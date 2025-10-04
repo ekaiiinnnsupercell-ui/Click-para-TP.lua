@@ -1,0 +1,62 @@
+-- LocalScript (colocar en StarterPlayer > StarterPlayerScripts)
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+local TOOL_NAME = "click to TP"
+
+local function crearTool()
+    -- evitar duplicados (en Backpack o en Character)
+    if player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild(TOOL_NAME) then return end
+    if player.Character and player.Character:FindFirstChild(TOOL_NAME) then return end
+
+    local success, err = pcall(function()
+        local tool = Instance.new("Tool")
+        tool.RequiresHandle = false
+        tool.Name = TOOL_NAME
+
+        tool.Activated:Connect(function()
+            local char = player.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            -- proteger en caso de que mouse.Hit sea nil
+            local hit = mouse.Hit
+            if not hit then return end
+            local pos = hit.p + Vector3.new(0, 2.5, 0)
+            hrp.CFrame = CFrame.new(pos)
+        end)
+
+        -- Asegurarse de que Backpack existe
+        local bp = player:WaitForChild("Backpack", 5)
+        if bp then
+            tool.Parent = bp
+        else
+            tool.Parent = player
+        end
+    end)
+    if not success then
+        warn("Error al crear el tool:", err)
+    end
+end
+
+-- Crear al iniciar
+crearTool()
+
+-- Recrear si se elimina del Backpack
+local function conectarMonitor()
+    local bp = player:WaitForChild("Backpack")
+    bp.ChildRemoved:Connect(function(child)
+        if child.Name == TOOL_NAME then
+            task.wait(0.5)
+            crearTool()
+        end
+    end)
+end
+conectarMonitor()
+
+-- Asegurar recreación al reaparecer el personaje
+player.CharacterAdded:Connect(function(char)
+    -- esperar a que cargue el character y backpack/humanoidrootpart
+    task.wait(0.7)
+    crearTool()
+end)
